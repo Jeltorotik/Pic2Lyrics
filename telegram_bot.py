@@ -1,5 +1,6 @@
 import telebot
 import main
+import os.path
 
 with open('bot_token.txt', 'r') as tkn:
     TOKEN = tkn.read()
@@ -15,6 +16,11 @@ def generate_labels(message_chat_id):
     pipeline.video_2_images('data/{}.mp4'.format(message_chat_id))
     pipeline.image_2_labels()
     return pipeline.images[0][2] #TODO: Fix labels 
+
+def generate_song(labels):
+    pass # TODO: Сделать генератор по лейблам
+
+
 
 @bot.message_handler(content_types=['video', 'photo', 'document'])
 def mainfunc(message):
@@ -60,11 +66,21 @@ def mainfunc(message):
 
 @bot.message_handler(commands=['new_song'])
 def send_new_song(message):
-    bot.send_message(message.chat.id, 'Функция в разработке')
+    
+    if not os.path.isfile("data/{}.txt".format(message.chat.id)):
+        bot.send_message(message.chat.id, 'Я не могу петь без картинки :<')
+        return
+    
+    with open("data/{}.txt".format(message.chat.id), 'r', encoding="utf-8") as file:
+        labels = file.read()
+        file.close()
+        
+    
+    bot.send_message(message.chat.id, 'Пока только лейблы :P')
+    bot.send_message(message.chat.id, labels)
+    
     '''
-    if если есть лейблы
-    with open("data/{}.txt".format)
-    song = generate_song(labels)
+    song = generate_song(labels.split())
     bot.send_message(message.chat.id, song)
     '''
     
