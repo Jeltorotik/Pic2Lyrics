@@ -1,5 +1,8 @@
-import telebot
 import main
+import telebot
+import generator_NN
+import generator_markov
+
 import os.path
 
 with open('bot_token.txt', 'r') as tkn:
@@ -11,20 +14,31 @@ bot = telebot.TeleBot(TOKEN)
 def doc_type(document):
     return str(document.file_name.split('.')[-1])
 
+
 def generate_labels(message_chat_id):
     pipeline = main.Pic2Lyrics()
     pipeline.video_2_images('data/{}.mp4'.format(message_chat_id))
     pipeline.image_2_labels()
     return pipeline.images[0][2] #TODO: Fix labels 
 
-def generate_song(labels):
-    pass # TODO: Сделать генератор по лейблам
+
+def generate_song(labels, alg = 'mark'):
+    if alg == 'mark':
+        gen = generator_markov.generate
+    else:
+        gen = generator_NN.generate     
+    song = []
+    for label in labels:
+        line = gen(label)
+        if line != None:
+            song.append(line)
+    return song
 
 
 
-@bot.message_handler(content_types=['video', 'photo', 'document'])
+@bot.message_handler(content_types=['video', 'photo', 'document', 'video_note'])
 def mainfunc(message):
-
+    
     #Downloading file
     if message.video is not None:
         print(message.video)
@@ -32,6 +46,9 @@ def mainfunc(message):
     elif message.photo is not None:
         print(message.photo)
         file_info = bot.get_file(message.photo[-1].file_id) 
+    elif message.video_note is not None:
+        print(message.video_note)
+        file_info = bot.get_file(message.video_note.file_id)
     else:
         print(doc_type(message.document))
         if doc_type(message.document) not in ['png', 'jpg', 'mp4']:#'gif']:
@@ -54,19 +71,13 @@ def mainfunc(message):
         file.write(str('\n'.join(labels)))
         file.close()
         
-    bot.send_message(message.chat.id, '\n'.join(labels))
-                     
-    """TODO: return lyrics
     song = generate_song(labels)
-    
-    bot.send_message(message.chat.id, song)
-    """
-    
+   
+    bot.send_message(message.chat.id, '\n'.join(song))
 
-
-@bot.message_handler(commands=['new_song'])
+    
+@bot.message_handler(commands=['new_song1', 'new_song2'])
 def send_new_song(message):
-    
     if not os.path.isfile("data/{}.txt".format(message.chat.id)):
         bot.send_message(message.chat.id, 'Я не могу петь без картинки :<')
         return
@@ -74,18 +85,17 @@ def send_new_song(message):
     with open("data/{}.txt".format(message.chat.id), 'r', encoding="utf-8") as file:
         labels = file.read()
         file.close()
+    
+    if message.text == '/new_song1':
+        way = 'NN'
+    else:
+        way = 'mark'
         
+    song = generate_song(labels.split(), alg = way)
     
-    bot.send_message(message.chat.id, 'Пока только лейблы :P')
-    bot.send_message(message.chat.id, labels)
+    bot.send_message(message.chat.id, '\n'.join(song))
     
-    '''
-    song = generate_song(labels.split())
-    bot.send_message(message.chat.id, song)
-    '''
-    
-    
-    
+
 @bot.message_handler(content_types=['text'])
 def check(message):
     print(message.text)
@@ -93,6 +103,4 @@ def check(message):
 
         
 
-
-def startbot():
-    bot.polling()
+bot.polling()
