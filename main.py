@@ -6,19 +6,11 @@ from matplotlib import pyplot as plt
 from google.cloud import vision
 from google.cloud.vision import types
 
+from translate import Translator
+import re
+
 import io
 import os
-
-def draw_picture(image, bgr=False):
-    b, g, r = cv2.split(image) 
-    new_image = cv2.merge([r, g, b])
-    plt.figure(figsize=(5, 5))
-    plt.axis('off')
-    plt.imshow(new_image)
-    plt.show()
-
-def preprocess(image, width, height, inter = cv2.INTER_AREA):
-    return cv2.resize(image, (width, height), interpolation = inter)
 
 class Pic2Lyrics():
     
@@ -26,6 +18,11 @@ class Pic2Lyrics():
         self.client = vision.ImageAnnotatorClient()
         self.images = []
         self.pointer = 0
+        self.translator = Translator(to_lang="ru")
+        
+    def append_img(self, path):
+        self.images.append([-1, cv2.imread(path), None])
+        
         
     def video_2_images(self, path, freq = 120):
         vidcap = cv2.VideoCapture(path)
@@ -36,9 +33,14 @@ class Pic2Lyrics():
             if frame % freq == 0:
                 self.images.append([frame, image, None])
                 #cv2.imwrite("frame%d.jpg" % frame, image)     # save frame as JPEG file 
-                #print(frame)
-                #draw_picture(image)
             frame += 1
+          
+        
+    def show_data(self):
+        for img in self.images:
+            print('Frame: {} \nLabels: {}'.format(img[0], img[2]))
+            draw_picture(img[1])
+    
     
     def recognition_google(self, image):
         #Takes numpy RGB image
@@ -53,7 +55,8 @@ class Pic2Lyrics():
 
         return output 
     
-    def image_2_labels(self, rec_sys="google"):
+    
+    def image_2_labels(self, rec_sys="google", russian = True):
         
         while self.pointer < len(self.images):
             print("{0}/{1}".format(self.pointer+1, len(self.images)))
@@ -61,11 +64,25 @@ class Pic2Lyrics():
 
             if rec_sys == "google":
                 
-                label = self.recognition_google(image[1])
+                eng_labels = self.recognition_google(image[1])
                 
             elif rec_sys == "yolo":
                 pass
                 #room for YOLO, or something
                 
-            self.images[self.pointer][2] = label
+            # Eng to rus
+            if russian:
+                labels = []
+                for label in eng_labels:
+                    rus_label = self.translator.translate(label)
+                    #Иногда переводчик оставляет английские слова, поэтому просто удалим их:
+                    rus_label = re.sub(r'[^А-Яа-я ]', '', rus_label)
+                    if re.sub(r' ', '', rus_label):
+                        labels.append(rus_label)
+            else:
+                labels = eng_labels
+                
+            self.images[self.pointer][2] = labels
             self.pointer += 1
+        print("Complete!")
+
