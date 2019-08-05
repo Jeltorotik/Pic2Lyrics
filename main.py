@@ -1,7 +1,4 @@
 import cv2
-import numpy as np
-import pandas as pd
-from matplotlib import pyplot as plt
 
 from google.cloud import vision
 from google.cloud.vision import types
@@ -85,4 +82,3 @@ class Pic2Lyrics():
             self.images[self.pointer][2] = labels
             self.pointer += 1
         print("Complete!")
-
