@@ -1,6 +1,6 @@
 import main
 import telebot
-import generator_NN
+#import generator_NN
 import generator_markov
 
 import os.path
@@ -31,7 +31,9 @@ def generate_song(labels, alg = 'mark'):
     if alg == 'mark':
         gen = generator_markov.generate
     else:
-        gen = generator_NN.generate
+        gen = generator_markov.generate
+        #TODO
+        #gen = generator_NN.generate
         
     song = []
     for label in labels:
