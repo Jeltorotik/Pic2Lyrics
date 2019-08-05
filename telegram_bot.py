@@ -14,6 +14,10 @@ bot = telebot.TeleBot(TOKEN)
 def doc_type(document):
     return str(document.file_name.split('.')[-1])
 
+def doc_type(document):
+    return str(document.file_name.split('.')[-1])
+
+
 
 def generate_labels(message_chat_id):
     pipeline = main.Pic2Lyrics()
@@ -22,16 +26,22 @@ def generate_labels(message_chat_id):
     return pipeline.images[0][2] #TODO: Fix labels 
 
 
+
 def generate_song(labels, alg = 'mark'):
     if alg == 'mark':
         gen = generator_markov.generate
     else:
-        gen = generator_NN.generate     
+        gen = generator_NN.generate
+        
     song = []
     for label in labels:
-        line = gen(label)
+        line = gen(label.lower())
+        print(line)
         if line != None:
             song.append(line)
+    if not song:
+        song.append('Бот ещё недостаточно умный, и эта картинка слишком абстрактна для него. Сори')
+    
     return song
 
 
@@ -72,7 +82,7 @@ def mainfunc(message):
         file.close()
         
     song = generate_song(labels)
-   
+    print(song)
     bot.send_message(message.chat.id, '\n'.join(song))
 
     
@@ -86,7 +96,7 @@ def send_new_song(message):
         labels = file.read()
         file.close()
     
-    if message.text == '/new_song1':
+    if message.text == '/new_song2':
         way = 'NN'
     else:
         way = 'mark'
@@ -100,7 +110,8 @@ def send_new_song(message):
 def check(message):
     print(message.text)
     bot.send_message(message.chat.id, 'Пришлите фото или видео')
-
         
 
-bot.polling()
+
+def startbot():
+    bot.polling()
